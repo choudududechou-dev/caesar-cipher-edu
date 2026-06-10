@@ -1,0 +1,41 @@
+{
+  "name": "caesar-cipher-edu",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n front,back -c blue,green \"vite\" \"tsx watch server/index.ts\"",
+    "dev:front": "vite",
+    "dev:server": "tsx watch server/index.ts",
+    "build": "vue-tsc -b && vite build",
+    "build:server": "tsx server/index.ts",
+    "preview": "vite preview",
+    "start": "tsx server/index.ts",
+    "start:student": "tsx start-standalone.js student",
+    "start:teacher": "tsx start-standalone.js teacher",
+    "start:admin": "tsx start-standalone.js admin"
+  },
+  "dependencies": {
+    "better-sqlite3": "12.10.0",
+    "cors": "2.8.6",
+    "express": "4.22.2",
+    "multer": "2.1.1",
+    "pinia": "3.0.4",
+    "vue": "^3.5.34",
+    "vue-router": "4.6.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "7.6.13",
+    "@types/cors": "2.8.19",
+    "@types/express": "5.0.6",
+    "@types/multer": "2.1.0",
+    "@types/node": "24.13.1",
+    "@vitejs/plugin-vue": "^6.0.6",
+    "@vue/tsconfig": "^0.9.1",
+    "concurrently": "10.0.3",
+    "tsx": "4.22.4",
+    "typescript": "~6.0.2",
+    "vite": "^8.0.12",
+    "vue-tsc": "^3.2.8"
+  }
+}

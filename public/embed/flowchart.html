@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>凯撒加密流程图</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  font-family:"PingFang SC","Microsoft YaHei",sans-serif;
+  background:#fdfaf5;
+  display:flex;justify-content:center;padding:16px 0;
+}
+.wrapper{display:flex;gap:28px;align-items:flex-start;max-width:780px;width:100%;}
+
+/* ===== FLOWCHART CONTAINER ===== */
+#chartContainer{flex:1;position:relative;width:500px;height:680px;margin:0 auto;background:rgba(139,90,43,.03);border-radius:12px;border:1px solid rgba(139,90,43,.08);}
+
+/* Nodes */
+.node{
+  padding:12px 22px;border-radius:10px;font-size:15px;font-weight:700;text-align:center;
+  white-space:nowrap;letter-spacing:1px;position:absolute;z-index:2;
+  transform:translate(-50%,-50%);
+}
+.node.fixed{background:rgba(139,90,43,.08);color:#8c7c6b;border:2px solid rgba(139,90,43,.18);}
+.node.start{background:rgba(100,160,120,.12);border-color:rgba(100,160,120,.3);color:#3d6b40;}
+.node.end{background:rgba(200,110,90,.12);border-color:rgba(200,110,90,.3);color:#8b3a2a;}
+
+.node.dropzone{
+  background:rgba(139,90,43,.03);border:2px dashed rgba(139,90,43,.2);
+  border-radius:10px;min-width:130px;min-height:44px;display:flex;align-items:center;justify-content:center;
+  transition:all 0.3s;cursor:pointer;color:rgba(139,90,43,.18);font-size:13px;font-weight:400;
+}
+.node.dropzone::before{content:attr(data-hint);}
+.node.dropzone:hover{border-color:rgba(196,58,49,.4);background:rgba(196,58,49,.04);}
+.node.dropzone.filled{
+  background:rgba(196,58,49,.05);color:#C43A31;border:2px solid rgba(196,58,49,.25);
+  font-size:15px;font-weight:700;
+}
+.node.dropzone.correct{
+  background:rgba(100,160,120,.12)!important;color:#3d6b40!important;
+  border-color:rgba(100,160,120,.4)!important;
+}
+.node.dropzone.wrong{
+  background:rgba(200,110,90,.12)!important;color:#8b3a2a!important;
+  border-color:rgba(200,110,90,.4)!important;
+}
+.node.dropzone.filled::before{content:none;}
+.node.dropzone.diamond{
+  border:none!important;background:transparent;border-radius:0;
+  width:190px;height:95px;min-width:0;min-height:0;
+  transform:translate(-50%,-50%);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='95'%3E%3Cpolygon points='95,0 190,48 95,95 0,48' fill='rgba(139,90,43,0.03)' stroke='rgba(139,90,43,0.2)' stroke-width='2' stroke-dasharray='6,4'/%3E%3C/svg%3E");
+  background-size:100% 100%;
+}
+.node.dropzone.diamond::before{position:relative;z-index:1;}
+.node.dropzone.diamond:hover{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='95'%3E%3Cpolygon points='95,0 190,48 95,95 0,48' fill='rgba(196,58,49,0.04)' stroke='rgba(196,58,49,0.4)' stroke-width='2' stroke-dasharray='6,4'/%3E%3C/svg%3E");
+}
+.node.dropzone.diamond.filled{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='190' height='95'%3E%3Cpolygon points='95,0 190,48 95,95 0,48' fill='rgba(196,58,49,0.05)' stroke='rgba(196,58,49,0.25)' stroke-width='2'/%3E%3C/svg%3E");
+}
+
+/* SVG lines */
+#lineLayer{position:absolute;top:0;left:0;width:500px;height:680px;pointer-events:none;z-index:1;}
+
+/* ===== ANSWER PANEL ===== */
+.answer-panel{
+  width:240px;background:rgba(139,90,43,.04);border-radius:16px;
+  padding:20px;border:1px solid rgba(139,90,43,.1);flex-shrink:0;
+}
+.answer-panel h3{font-size:15px;color:#5a3e2b;text-align:center;margin-bottom:14px;font-weight:600;}
+.answer-card{
+  background:white;border:1px solid rgba(139,90,43,.15);
+  border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:14px;
+  color:#3d2817;cursor:grab;transition:all 0.25s;text-align:center;user-select:none;font-weight:600;
+}
+.answer-card:hover{background:rgba(196,58,49,.04);border-color:rgba(196,58,49,.3);}
+.answer-card:active{cursor:grabbing;opacity:0.6;}
+.answer-card.used{opacity:0.15;pointer-events:none;}
+.reset-btn{
+  display:block;width:100%;margin-top:10px;padding:10px;
+  background:rgba(200,110,90,.08);border:1px solid rgba(200,110,90,.2);
+  border-radius:10px;color:#8b3a2a;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.3s;
+}
+.reset-btn:hover{background:rgba(200,110,90,.18);}
+.submit-btn{
+  display:block;width:100%;margin-top:8px;padding:10px;
+  background:rgba(100,160,120,.12);border:1px solid rgba(100,160,120,.25);
+  border-radius:10px;color:#3d6b40;font-size:14px;font-weight:700;cursor:pointer;transition:all 0.3s;
+}
+.submit-btn:hover{background:rgba(100,160,120,.22);}
+.result-msg{text-align:center;margin-top:10px;font-size:16px;min-height:24px;font-weight:700;}
+</style>
+</head>
+<body>
+
+<div class="wrapper">
+
+<!-- ===== FLOWCHART ===== -->
+<div id="chartContainer">
+  <svg id="lineLayer" viewBox="0 0 500 680"></svg>
+
+  <div class="node fixed start" style="left:250px;top:28px;">开 始</div>
+  <div class="node dropzone" data-answer="输入明文" data-hint="?" style="left:250px;top:108px;"></div>
+  <div class="node dropzone diamond" data-answer="明文中还有字母未处理？" data-hint="?" style="left:250px;top:198px;transform:translate(-50%,-50%);"></div>
+  <div class="node dropzone" data-answer="向右移动三位" data-hint="?" style="left:250px;top:310px;"></div>
+  <div class="node dropzone" data-answer="输出密文" data-hint="?" style="left:250px;top:400px;"></div>
+  <div class="node dropzone" data-answer="取下一个字母" data-hint="?" style="left:250px;top:490px;"></div>
+  <div class="node fixed end" style="left:250px;top:615px;">结 束</div>
+</div>
+
+<!-- ===== ANSWER PANEL ===== -->
+<div class="answer-panel">
+  <h3>📋 拖拽到空白框</h3>
+  <div id="answerCards"></div>
+  <button class="submit-btn" onclick="checkAll()">✅ 提交判断</button>
+  <button class="reset-btn" onclick="resetAll()">🔄 重新作答</button>
+  <div class="result-msg" id="resultMsg"></div>
+</div>
+
+</div>
+
+<script>
+// ===== DRAW LINES =====
+(function drawLines(){
+  const svg=document.getElementById('lineLayer');
+  const NS='http://www.w3.org/2000/svg';
+
+  function L(x1,y1,x2,y2,d){const l=document.createElementNS(NS,'line');l.setAttribute('x1',x1);l.setAttribute('y1',y1);l.setAttribute('x2',x2);l.setAttribute('y2',y2);l.setAttribute('stroke','rgba(139,90,43,.22)');l.setAttribute('stroke-width','2');if(d)l.setAttribute('stroke-dasharray','6,4');svg.appendChild(l);}
+  function A(x,y,dir){const p=document.createElementNS(NS,'polygon');if(dir==='down')p.setAttribute('points',`${x-5},${y-6} ${x},${y+6} ${x+5},${y-6}`);if(dir==='up')p.setAttribute('points',`${x-5},${y+6} ${x},${y-6} ${x+5},${y+6}`);if(dir==='left')p.setAttribute('points',`${x+6},${y-5} ${x-6},${y} ${x+6},${y+5}`);if(dir==='right')p.setAttribute('points',`${x-6},${y-5} ${x+6},${y} ${x-6},${y+5}`);p.setAttribute('fill','rgba(139,90,43,.22)');svg.appendChild(p);}
+  function T(x,y,txt,c){const te=document.createElementNS(NS,'text');te.setAttribute('x',x);te.setAttribute('y',y);te.setAttribute('text-anchor','middle');te.setAttribute('dominant-baseline','middle');te.setAttribute('fill',c||'rgba(139,90,43,.35)');te.setAttribute('font-size','15');te.setAttribute('font-weight','900');te.textContent=txt;svg.appendChild(te);}
+
+  const cx=250, lx=75, dr=345, db=246;
+
+  // 开始→输入明文
+  L(cx,50,cx,83); A(cx,83,'down');
+  // 输入明文→菱形
+  L(cx,133,cx,148); A(cx,148,'down');
+  // 是: 菱形→向右移动三位
+  L(cx,db,cx,285); A(cx,285,'down');
+  T(cx-30,275,'是','#3d6b40');
+  // 否: 菱形右→右→下→左→下→结束
+  L(dr,198,dr+15,198);
+  L(dr+15,198,dr+15,580);
+  L(dr+15,580,cx,580);
+  L(cx,565,cx,590); A(cx,590,'down');
+  T(dr+35,270,'否','#8b3a2a');
+  // 向右移动三位→输出密文
+  L(cx,335,cx,375); A(cx,375,'down');
+  // 输出密文→取下一个字母
+  L(cx,425,cx,465); A(cx,465,'down');
+  // 返回继续
+  L(cx,515,cx,545);
+  L(cx,545,lx,545);
+  L(lx,545,lx,198);
+  L(lx,198,150,198);
+  A(150,198,'right');
+  T(112,558,'返回继续');
+})();
+
+// ===== DRAG & DROP =====
+const answers=['输入明文','明文中还有字母未处理？','向右移动三位','输出密文','取下一个字母'];
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+function buildCards(){
+  const container=document.getElementById('answerCards');
+  container.innerHTML='';
+  shuffle(answers).forEach(a=>{
+    const div=document.createElement('div');
+    div.className='answer-card';div.draggable=true;div.dataset.answer=a;div.textContent=a;
+    container.appendChild(div);
+  });
+  bindCards();
+}
+buildCards();
+
+function bindCards(){
+  document.querySelectorAll('.answer-card').forEach(card=>{
+    card.addEventListener('dragstart',e=>{
+      if(card.classList.contains('used')){e.preventDefault();return;}
+      draggedCard=card;card.style.opacity='0.5';
+    });
+    card.addEventListener('dragend',e=>{card.style.opacity='';draggedCard=null;});
+  });
+}
+
+const dropzones=document.querySelectorAll('.node.dropzone');
+let draggedCard=null;
+
+dropzones.forEach(dz=>{
+  dz.addEventListener('dragover',e=>{e.preventDefault();});
+  dz.addEventListener('dragenter',e=>{dz.style.borderColor='#C43A31';});
+  dz.addEventListener('dragleave',e=>{if(!dz.classList.contains('filled'))dz.style.borderColor='';});
+  dz.addEventListener('drop',e=>{
+    e.preventDefault();dz.style.borderColor='';
+    if(!draggedCard||dz.classList.contains('filled'))return;
+    const ans=draggedCard.dataset.answer;
+    dz.textContent=ans;
+    dz.classList.add('filled');
+    draggedCard.classList.add('used');
+  });
+  dz.addEventListener('click',function(){
+    if(!this.classList.contains('filled'))return;
+    const txt=this.textContent;
+    this.textContent='';this.classList.remove('filled','correct','wrong');
+    document.querySelectorAll('.answer-card').forEach(c=>{if(c.dataset.answer===txt)c.classList.remove('used');});
+  });
+});
+
+function checkAll(){
+  const zones=document.querySelectorAll('.node.dropzone');
+  let correct=0,total=zones.length,allFilled=true;
+  zones.forEach(dz=>{
+    dz.classList.remove('correct','wrong');
+    if(!dz.classList.contains('filled')){allFilled=false;return;}
+    if(dz.textContent===dz.dataset.answer){dz.classList.add('correct');correct++;}
+    else{dz.classList.add('wrong');}
+  });
+  const msg=document.getElementById('resultMsg');
+  if(!allFilled){msg.textContent='⚠️ 请先完成所有填空';msg.style.color='#8b3a2a';}
+  else if(correct===total){
+    msg.textContent='🎉 全部正确！';
+    msg.style.color='#3d6b40';
+    // 通知父窗口
+    try{window.parent.postMessage({type:'flowchart-result',correct:true,total:total},'*');}catch(e){}
+  }else{
+    msg.textContent=`✅ ${correct}/${total} 正确`;
+    msg.style.color='#8b3a2a';
+    try{window.parent.postMessage({type:'flowchart-result',correct:false,correctCount:correct,total:total},'*');}catch(e){}
+  }
+}
+
+function resetAll(){
+  dropzones.forEach(dz=>{dz.textContent='';dz.classList.remove('filled','correct','wrong');});
+  document.getElementById('resultMsg').textContent='';
+  buildCards();
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,69 @@
+============================================
+  凯撒密码教学系统 — 运行说明
+============================================
+
+【前提条件】
+1. 安装 Node.js（版本 18 或以上）
+   下载地址：https://nodejs.org
+
+   安装时勾选"自动安装必要工具"（Chocolatey 那一步可以跳过）
+
+2. 验证安装成功：
+   打开"命令提示符"或 PowerShell，输入：
+   node --version
+   npm --version
+   都能显示版本号就说明装好了。
+
+【运行步骤】
+
+1. 删除 node_modules 文件夹（如果从别人那里复制过来的话）
+   → 因为里面的原生模块（better-sqlite3）和你的电脑不兼容
+
+2. 在 caesar-cipher-edu 文件夹中打开终端
+   → 方法：在文件夹空白处 Shift+右键 → "在此处打开 PowerShell 窗口"
+
+3. 安装依赖（仅第一次，约需1-2分钟）：
+   npm install
+
+   注意：如果报错找不到 Python 或 C++ 编译工具，
+   以管理员身份运行 PowerShell，执行：
+   npm install --global windows-build-tools
+   然后再运行 npm install
+
+4. 启动项目：
+   npm run dev
+
+   看到以下提示说明启动成功：
+   🔐 Caesar Cipher Edu Server running at http://localhost:3001
+   📱 学生端网址: http://localhost:5173/#/student
+   👨‍🏫 教师端网址: http://localhost:5173/#/teacher
+
+5. 打开浏览器，访问：
+   - 学生端：http://localhost:5173/#/student
+   - 教师端：http://localhost:5173/#/teacher
+
+【一键启动脚本】
+如果已经执行过 npm install，之后每次只需双击：
+  start.bat
+
+【如果 npm install 报错】
+
+错误1：'npm' 不是内部或外部命令
+→ 重启电脑，或重新安装 Node.js
+
+错误2：better-sqlite3 编译失败
+→ 安装 Visual Studio Build Tools：
+  https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022
+  安装时勾选"Desktop development with C++"
+  装完后重启电脑，再运行 npm install
+
+错误3：端口被占用
+→ 修改 vite.config.ts 中的 port: 5173 改成其他端口（如 5174）
+
+【项目结构】
+caesar-cipher-edu/
+├── src/          ← 前端 Vue 代码
+├── server/       ← 后端 Express 代码
+├── data/         ← SQLite 数据库文件
+├── public/       ← 静态资源
+└── 简约版*.html  ← 可独立打开的演示版（双击即可用）
