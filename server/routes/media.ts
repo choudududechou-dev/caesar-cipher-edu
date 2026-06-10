@@ -8,9 +8,14 @@ import { fileURLToPath } from 'url'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const router = Router()
 
-// 配置 multer 存储
-const uploadDir = path.join(__dirname, '..', '..', 'public', 'uploads')
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true })
+// multer 存储路径：编译后用 EXE 所在目录，开发时用项目 public/
+function getUploadDir(): string {
+  const base = process.cwd()
+  const dir = path.join(base, 'public', 'uploads')
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
+  return dir
+}
+const uploadDir = getUploadDir()
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, uploadDir),

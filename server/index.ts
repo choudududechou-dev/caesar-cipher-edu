@@ -37,13 +37,38 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
 })
 
-// Serve built frontend (production) or proxy fallback
+// Serve built frontend (production)
 const distPath = path.join(__dirname, '..', 'dist')
-app.use(express.static(distPath))
-// SPA fallback: all non-API routes → index.html
-app.get(/^\/(?!api\/|embed\/|uploads\/|videos\/|images\/).*/, (_req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'))
-})
+// Try filesystem first, fall back to in-memory (Bun compiled mode)
+const memFiles = (globalThis as any).__staticFiles as Map<string, { data: Buffer; mime: string }> | undefined
+
+if (memFiles) {
+  // Bun compiled mode: serve from preloaded memory
+  app.use((req, _res, next) => {
+    const url = new URL(req.url || '/', `http://localhost`)
+    let filePath = url.pathname === '/' ? '/index.html' : url.pathname
+    const memFile = memFiles.get(filePath)
+    if (memFile) {
+      _res.setHeader('Content-Type', memFile.mime)
+      _res.end(memFile.data)
+      return
+    }
+    // SPA fallback
+    const indexFile = memFiles.get('/index.html')
+    if (indexFile && !filePath.startsWith('/api/') && !filePath.startsWith('/embed/') && !filePath.startsWith('/uploads/') && !filePath.startsWith('/videos/') && !filePath.startsWith('/images/')) {
+      _res.setHeader('Content-Type', 'text/html')
+      _res.end(indexFile.data)
+      return
+    }
+    next()
+  })
+} else {
+  // Standard mode: serve from dist/ folder
+  app.use(express.static(distPath))
+  app.get(/^\/(?!api\/|embed\/|uploads\/|videos\/|images\/).*/, (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'))
+  })
+}
 
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err)

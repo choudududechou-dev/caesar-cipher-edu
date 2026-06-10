@@ -1,41 +1,49 @@
-import Database from 'better-sqlite3'
+// 运行时自适应：Node.js → better-sqlite3 / Bun → bun:sqlite
 import path from 'path'
 import fs from 'fs'
-import { fileURLToPath } from 'url'
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url))
-const DB_PATH = path.join(__dirname, '..', 'data', 'caesar-cipher.db')
+// 统一用 process.cwd()，开发/编译模式均适用
+const DATA_DIR = path.join(process.cwd(), 'data')
+const DB_PATH = path.join(DATA_DIR, 'caesar-cipher.db')
 
-let db: Database.Database
+let db: any
 
-export function getDatabase(): Database.Database {
+function createBetterSQLite() {
+  const Database = require('better-sqlite3')
+  const d = new Database(DB_PATH)
+  d.pragma('journal_mode = WAL')
+  d.pragma('foreign_keys = ON')
+  return d
+}
+
+function createBunSQLite() {
+  const { Database } = require('bun:sqlite') as any
+  const d = new Database(DB_PATH)
+  d.run('PRAGMA journal_mode = WAL')
+  d.run('PRAGMA foreign_keys = ON')
+  return d
+}
+
+function isBun(): boolean {
+  return typeof (globalThis as any).Bun !== 'undefined'
+}
+
+export function getDatabase(): any {
   if (!db) {
-    const dir = path.dirname(DB_PATH)
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true })
-    }
-    db = new Database(DB_PATH)
-    db.pragma('journal_mode = WAL')
-    db.pragma('foreign_keys = ON')
+    if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+    db = isBun() ? createBunSQLite() : createBetterSQLite()
   }
   return db
 }
 
 export function initDatabase(): void {
-  const dir = path.dirname(DB_PATH)
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true })
-  }
-  db = new Database(DB_PATH)
-  db.pragma('journal_mode = WAL')
-  db.pragma('foreign_keys = ON')
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
 
-  // Checkpoint any unmerged WAL data from previous runs
-  try {
-    db.pragma('wal_checkpoint(RESTART)')
-  } catch {
-    // If checkpoint fails (e.g., corrupted WAL), the WAL will be ignored by SQLite
-    console.warn('⚠ WAL checkpoint failed — if sessions are missing, delete data/caesar-cipher.db-wal and data/caesar-cipher.db-shm')
+  db = isBun() ? createBunSQLite() : createBetterSQLite()
+
+  // WAL checkpoint - only for better-sqlite3
+  if (!isBun()) {
+    try { db.pragma('wal_checkpoint(RESTART)') } catch { console.warn('⚠ WAL checkpoint failed') }
   }
 
   db.exec(`
@@ -138,63 +146,35 @@ export function initDatabase(): void {
     );
   `)
 
-  // Seed default content if empty
   const count = db.prepare('SELECT COUNT(*) as c FROM content').get() as { c: number }
-  if (count.c === 0) {
-    seedContent()
-  }
+  if (count.c === 0) seedContent()
 
-  // Seed default exercises if empty
   const exCount = db.prepare('SELECT COUNT(*) as c FROM exercises').get() as { c: number }
-  if (exCount.c === 0) {
-    seedExercises()
-  }
+  if (exCount.c === 0) seedExercises()
 
   console.log('✅ Database initialized at ' + DB_PATH)
 }
 
 function seedContent(): void {
-  const insert = db.prepare(
-    'INSERT INTO content (section, title, body, media_urls, sort_order) VALUES (?, ?, ?, ?, ?)'
-  )
-
-  const defaultContent = [
-    ['intro', '情境导入：刺桐港的密信',
-      '<p>宋元时期，泉州（古称刺桐）是世界上最繁华的港口之一。满载丝绸、瓷器的商船从这里出发，驶向遥远的亚历山大港。船队需要传递机密信息——货物清单、航线、价格——这些绝不能落入海盗和竞争对手之手。</p><p>如果你是船长，如何确保你的信息只有远方的伙伴能看懂？</p>',
-      '[]', 1],
-    ['timeline', '密码进化史',
-      '<p>从古罗马的凯撒密码，到现代的量子加密，人类保护信息的智慧不断进化。</p>',
-      '[]', 2],
-    ['modern', '现代密码应用',
-      '<p>今天，密码已经渗透到我们生活的方方面面。从手机解锁到网上支付，加密技术守护着我们的数字生活。</p>',
-      '[]', 3],
+  const insert = db.prepare('INSERT INTO content (section, title, body, media_urls, sort_order) VALUES (?, ?, ?, ?, ?)')
+  const items = [
+    ['intro', '情境导入：刺桐港的密信', '<p>宋元时期，泉州（古称刺桐）是世界上最繁华的港口之一…</p>', '[]', 1],
+    ['timeline', '密码进化史', '<p>从古罗马的凯撒密码，到现代的量子加密…</p>', '[]', 2],
+    ['modern', '现代密码应用', '<p>今天，密码已经渗透到我们生活的方方面面…</p>', '[]', 3],
   ]
-
-  for (const c of defaultContent) {
-    insert.run(...c)
-  }
+  for (const c of items) insert.run(...c)
 }
 
 function seedExercises(): void {
-  const insert = db.prepare(
-    'INSERT INTO exercises (type, question, answer, hint, difficulty, tags, word_length) VALUES (?, ?, ?, ?, ?, ?, ?)'
-  )
-
-  const defaultExercises = [
-    ['basic', '用偏移量3加密单词"HELLO"', 'KHOOR', '每个字母向后移动3位：H→K, E→H, L→O, L→O, O→R', 1, '["basic"]', null],
+  const insert = db.prepare('INSERT INTO exercises (type, question, answer, hint, difficulty, tags, word_length) VALUES (?, ?, ?, ?, ?, ?, ?)')
+  const items = [
+    ['basic', '用偏移量3加密单词"HELLO"', 'KHOOR', '每个字母向后移动3位', 1, '["basic"]', null],
     ['basic', '用偏移量5加密单词"CAESAR"', 'HFJXFW', '每个字母向后移动5位', 1, '["basic"]', null],
-    ['basic', '解密偏移量3的密文"KHOOR"，还原明文', 'HELLO', '每个字母向前移动3位', 1, '["basic"]', null],
-    ['basic', '偏移量7加密"COMPUTER"', 'JVTWBYL', '注意：C→J, O→V, M→T...', 2, '["basic"]', null],
-    ['challenge', '密文"FDW"，偏移量未知，请破解（提示：常见英语单词）', 'CAT', '一个常见的英语单词', 2, '["challenge"]', 3],
-    ['challenge', '密文"HSK"，偏移量未知，请破解（提示：常见英语单词）', 'DOG', '一个常见的英语单词', 2, '["challenge"]', 3],
-    ['challenge', '密文"XZS"，偏移量未知，请破解（提示：常见英语单词）', 'SUN', '一个常见的英语单词', 2, '["challenge"]', 3],
-    ['challenge', '密文"ILVK"，偏移量未知，请破解（提示：常见英语单词）', 'FISH', '一个常见的英语单词', 2, '["challenge"]', 4],
-    ['challenge', '密文"UVCT"，偏移量未知，请破解（提示：常见英语单词）', 'STAR', '一个常见的英语单词', 2, '["challenge"]', 4],
+    ['basic', '解密偏移量3的密文"KHOOR"', 'HELLO', '每个字母向前移动3位', 1, '["basic"]', null],
+    ['challenge', '密文"FDW"，偏移量未知，请破解', 'CAT', '常见英语单词', 2, '["challenge"]', 3],
+    ['challenge', '密文"HSK"，偏移量未知，请破解', 'DOG', '常见英语单词', 2, '["challenge"]', 3],
   ]
-
-  for (const e of defaultExercises) {
-    insert.run(...e)
-  }
+  for (const e of items) insert.run(...e)
 }
 
 export { db }
